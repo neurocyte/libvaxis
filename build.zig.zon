@@ -8,7 +8,7 @@
             .hash = "1220a5e36ab5e2be076f8765d165f3368a4c9f326dc77ac61c1e90bbce312fc37a39",
         },
         .zg = .{
-            .url = "git+https://codeberg.org/utkarshmalik/zg#7ca90b6f8796cd6615ddc61e12cd292ea26662ce",
+            .url = "https://github.com/neurocyte/zg/archive/4a002763419a34d61dcbb1f415821b83b9bf8ddc.tar.gz",
             .hash = "1220f3e29bc40856bfc06e0ee133f814b0011c76de987d8a6a458c2f34d82708899a",
         },
     },
