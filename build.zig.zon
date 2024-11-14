@@ -8,7 +8,7 @@
             .hash = "1220dd654ef941fc76fd96f9ec6adadf83f69b9887a0d3f4ee5ac0a1a3e11be35cf5",
         },
         .zg = .{
-            .url = "https://codeberg.org/atman/zg/archive/v0.13.2.tar.gz",
+            .url = "https://github.com/neurocyte/zg/archive/refs/tags/v0.13.2.tar.gz",
             .hash = "122055beff332830a391e9895c044d33b15ea21063779557024b46169fb1984c6e40",
         },
     },
