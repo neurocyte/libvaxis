@@ -73,6 +73,8 @@ sgr: enum {
     legacy,
 } = .standard,
 
+conpty_hacks: bool = false,
+
 state: struct {
     /// if we are in the alt screen
     alt_screen: bool = false,
@@ -519,7 +521,9 @@ pub fn render(self: *Vaxis, tty: AnyWriter) !void {
                     }
                 },
                 .rgb => |rgb| {
-                    switch (self.sgr) {
+                    if (self.conpty_hacks)
+                        try tty.print(ctlseqs.ul_rgb_conpty, .{ rgb[0], rgb[1], rgb[2] })
+                    else switch (self.sgr) {
                         .standard => try tty.print(ctlseqs.ul_rgb, .{ rgb[0], rgb[1], rgb[2] }),
                         .legacy => try tty.print(ctlseqs.ul_rgb_legacy, .{ rgb[0], rgb[1], rgb[2] }),
                     }
@@ -1141,9 +1145,13 @@ pub fn prettyPrint(self: *Vaxis, tty: AnyWriter) !void {
                     }
                 },
                 .rgb => |rgb| {
-                    switch (self.sgr) {
+                    if (self.conpty_hacks)
+                        try tty.print(ctlseqs.ul_rgb_conpty, .{ rgb[0], rgb[1], rgb[2] })
+                    else switch (self.sgr) {
                         .standard => try tty.print(ctlseqs.ul_rgb, .{ rgb[0], rgb[1], rgb[2] }),
-                        .legacy => try tty.print(ctlseqs.ul_rgb_legacy, .{ rgb[0], rgb[1], rgb[2] }),
+                        .legacy => {
+                            try tty.print(ctlseqs.ul_rgb_legacy, .{ rgb[0], rgb[1], rgb[2] });
+                        },
                     }
                 },
             }
