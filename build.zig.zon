@@ -9,8 +9,8 @@
             .hash = "zigimg-0.1.0-lly-O6N2EABOxke8dqyzCwhtUCAafqP35zC7wsZ4Ddxj",
         },
         .zg = .{
-            .url = "git+https://codeberg.org/atman/zg#0b05141b033043c5f7bcd72048a48eef6531ea6c",
-            .hash = "zg-0.14.0-oGqU3KEFswIffnDu8eAE2XlhzwcfgjwtM6akIc5L7cEV",
+            .url = "git+https://codeberg.org/neurocyte/zg#b52de5b7f40f1047a8ceadad104476e44c4e5bdf",
+            .hash = "zg-0.14.0-oGqU3OgHswKrh2lcR41kvgFOxW2aIBthuwOukJ_C_5sg",
         },
     },
     .paths = .{
