@@ -227,7 +227,7 @@ test SplitView {
     };
 
     var ctx: vxfw.EventContext = .{
-        .cmds = std.ArrayList(vxfw.Command).init(arena.allocator()),
+        .cmds = .init(arena.allocator()),
     };
     try split_widget.handleEvent(&ctx, .{ .mouse = mouse });
     // We should get a command to change the mouse shape

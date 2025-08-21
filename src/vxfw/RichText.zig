@@ -174,7 +174,7 @@ pub const SoftwrapIterator = struct {
                         .link = span.link,
                     };
                     for (0..8) |_| {
-                        try list.append(cell);
+                        try list.append(arena.allocator(), cell);
                     }
                     continue;
                 }
@@ -184,7 +184,7 @@ pub const SoftwrapIterator = struct {
                     .style = span.style,
                     .link = span.link,
                 };
-                try list.append(cell);
+                try list.append(arena.allocator(), cell);
             }
         }
         return .{

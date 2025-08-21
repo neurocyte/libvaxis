@@ -138,7 +138,7 @@ test Button {
 
     // Event handlers need a context
     var ctx: vxfw.EventContext = .{
-        .cmds = std.ArrayList(vxfw.Command).init(std.testing.allocator),
+        .cmds = .init(std.testing.allocator),
     };
     defer ctx.cmds.deinit();
 

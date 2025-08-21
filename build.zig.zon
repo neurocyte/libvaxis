@@ -11,8 +11,8 @@
         },
         .zg = .{
             // TODO .url = "git+https://codeberg.org/atman/zg",
-            .url = "git+https://codeberg.org/ivanstepanovftw/zg#4fe689e56ce2ed5a8f59308b471bccd7da89fac9",
-            .hash = "zg-0.14.1-oGqU3J4_tAKBfyes3AWleKDjo-IcYvnEwaB8qxOqFMwM",
+            .url = "git+https://codeberg.org/neurocyte/zg?ref=master#464487c6d9e27df6f337f0e1e1cda83ffd813c7b",
+            .hash = "zg-0.14.1-oGqU3GNAtAJRdZstP1NmDiDlstXrVelYlDeW5WoQfY_L",
         },
     },
     .paths = .{

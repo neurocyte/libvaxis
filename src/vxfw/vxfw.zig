@@ -27,7 +27,7 @@ pub const Spinner = @import("Spinner.zig");
 pub const Text = @import("Text.zig");
 pub const TextField = @import("TextField.zig");
 
-pub const CommandList = std.ArrayList(Command);
+pub const CommandList = std.array_list.Managed(Command);
 
 pub const UserEvent = struct {
     name: []const u8,

@@ -728,7 +728,7 @@ pub const TestTty = struct {
     pub fn init() !TestTty {
         if (builtin.os.tag == .windows) return error.SkipZigTest;
         const list = try std.testing.allocator.create(std.ArrayList(u8));
-        list.* = std.ArrayList(u8).init(std.testing.allocator);
+        list.* = .empty;
         const r, const w = try posix.pipe();
         return .{
             .fd = r,
@@ -741,7 +741,7 @@ pub const TestTty = struct {
     pub fn deinit(self: TestTty) void {
         std.posix.close(self.pipe_read);
         std.posix.close(self.pipe_write);
-        self.writer.deinit();
+        self.writer.deinit(std.testing.allocator);
         std.testing.allocator.destroy(self.writer);
     }
 
@@ -750,7 +750,7 @@ pub const TestTty = struct {
         if (std.mem.eql(u8, bytes, ctlseqs.device_status_report)) {
             _ = posix.write(self.pipe_write, "\x1b") catch {};
         }
-        return self.writer.writer().write(bytes);
+        return self.writer.writer(std.testing.allocator).write(bytes);
     }
 
     pub fn opaqueWrite(ptr: *const anyopaque, bytes: []const u8) !usize {
