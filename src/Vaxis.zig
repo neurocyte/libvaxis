@@ -1360,5 +1360,5 @@ pub fn setTerminalWorkingDirectory(_: *Vaxis, tty: AnyWriter, path: []const u8) 
         .host = .{ .raw = hostname },
         .path = .{ .raw = path },
     };
-    try tty.print(ctlseqs.osc7, .{uri});
+    try tty.print(ctlseqs.osc7, .{uri.fmt(.{ .scheme = true, .authority = true, .path = true })});
 }
