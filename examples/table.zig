@@ -21,8 +21,8 @@ pub fn main() !void {
 
     // Users set up below the main function
     const users_buf = try alloc.dupe(User, users[0..]);
-    const user_list = std.ArrayList(User).fromOwnedSlice(alloc, users_buf);
-    defer user_list.deinit();
+    var user_list: std.ArrayList(User) = .fromOwnedSlice(users_buf);
+    defer user_list.deinit(alloc);
     var user_mal = std.MultiArrayList(User){};
     for (users_buf[0..]) |user| try user_mal.append(alloc, user);
     defer user_mal.deinit(alloc);
