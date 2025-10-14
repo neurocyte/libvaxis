@@ -11,8 +11,8 @@
         },
         .zg = .{
             // Upstream PR: https://codeberg.org/atman/zg/pulls/90/
-            .url = "https://codeberg.org/chaten/zg/archive/749197a3f9d25e211615960c02380a3d659b20f9.tar.gz",
-            .hash = "zg-0.15.1-oGqU3M0-tALZCy7boQS86znlBloyKx6--JriGlY0Paa9",
+            .url = "git+https://codeberg.org/neurocyte/zg?ref=master#cdcab8b9ea3458efd710008055d993c5dbdb1af7",
+            .hash = "zg-0.15.2-oGqU3AtAtAI7gs7zPvzg2_TlVIqi9wCNEw7DLvD5OvDN",
         },
     },
     .paths = .{
