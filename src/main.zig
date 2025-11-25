@@ -29,6 +29,7 @@ pub const ctlseqs = @import("ctlseqs.zig");
 pub const GraphemeCache = @import("GraphemeCache.zig");
 pub const Event = @import("event.zig").Event;
 pub const unicode = @import("unicode.zig");
+pub const uucode = @import("uucode");
 
 pub const vxfw = @import("vxfw/vxfw.zig");
 
