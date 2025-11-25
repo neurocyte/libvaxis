@@ -18,6 +18,10 @@ pub fn build(b: *std.Build) void {
             "grapheme_break",
             "general_category",
             "is_emoji_presentation",
+            "case_folding_simple",
+            "simple_uppercase_mapping",
+            "simple_lowercase_mapping",
+            "is_lowercase",
         }),
     });
 
