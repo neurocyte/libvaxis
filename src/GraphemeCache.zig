@@ -2,8 +2,8 @@ const std = @import("std");
 
 const GraphemeCache = @This();
 
-/// the underlying storage for graphemes. Right now 8kb
-buf: [1024 * 8]u8 = undefined,
+/// the underlying storage for graphemes. Right now 32kb
+buf: [1024 * 32]u8 = undefined,
 
 // the start index of the next grapheme
 idx: usize = 0,
