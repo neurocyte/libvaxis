@@ -34,7 +34,7 @@ pub const PosixTty = struct {
     fd: posix.fd_t,
 
     /// File.Writer for efficient buffered writing
-    tty_writer: std.fs.File.Writer,
+    tty_writer: std.Io.File.Writer,
 
     pub const SignalHandler = struct {
         context: *anyopaque,
@@ -51,9 +51,11 @@ pub const PosixTty = struct {
     /// initializes a Tty instance by opening /dev/tty and "making it raw". A
     /// signal handler is installed for SIGWINCH. No callbacks are installed, be
     /// sure to register a callback when initializing the event loop
-    pub fn init(buffer: []u8) !PosixTty {
+    pub fn init(io: std.Io, buffer: []u8) !PosixTty {
         // Open our tty
-        const fd = try posix.open("/dev/tty", .{ .ACCMODE = .RDWR }, 0);
+
+        const tty_file = try (try std.Io.Dir.openDirAbsolute(io, "/dev/", .{})).openFile(io, "tty", .{ .allow_ctty = true, .mode = .read_write });
+        const fd = tty_file.handle;
 
         // Set the termios of the tty
         const termios = try makeRaw(fd);
@@ -69,12 +71,12 @@ pub const PosixTty = struct {
         posix.sigaction(posix.SIG.WINCH, &act, null);
         handler_installed = true;
 
-        const file = std.fs.File{ .handle = fd };
+        const file = std.Io.File{ .handle = fd };
 
         const self: PosixTty = .{
             .fd = fd,
             .termios = termios,
-            .tty_writer = .initStreaming(file, buffer),
+            .tty_writer = .initStreaming(file, io, buffer),
         };
 
         global_tty = self;
@@ -124,7 +126,7 @@ pub const PosixTty = struct {
         handler_idx += 1;
     }
 
-    fn handleWinch(_: c_int) callconv(.c) void {
+    fn handleWinch(_: std.os.linux.SIG) callconv(.c) void {
         handler_mutex.lock();
         defer handler_mutex.unlock();
         var i: usize = 0;
@@ -705,7 +707,7 @@ pub const TestTty = struct {
         if (builtin.os.tag == .windows) return error.SkipZigTest;
         const list = try std.testing.allocator.create(std.Io.Writer.Allocating);
         list.* = .init(std.testing.allocator);
-        const r, const w = try posix.pipe();
+        const r, const w = try std.Io.Threaded.pipe2(.{});
         return .{
             .fd = r,
             .pipe_read = r,

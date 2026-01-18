@@ -151,13 +151,10 @@ const Model = struct {
     }
 };
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
+pub fn main(init: std.process.Init) !void {
+    const allocator = init.gpa;
 
-    const allocator = gpa.allocator();
-
-    var app = try vxfw.App.init(allocator);
+    var app = try vxfw.App.init(init.io, allocator);
     errdefer app.deinit();
 
     var arena = std.heap.ArenaAllocator.init(allocator);
@@ -209,6 +206,6 @@ pub fn main() !void {
         }
     }
 
-    try app.run(model.widget(), .{});
+    try app.run(init.io, init.environ_map, model.widget(), .{});
     app.deinit();
 }

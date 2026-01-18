@@ -14,7 +14,7 @@ working_directory: ?[]const u8,
 // Set after spawn()
 pid: ?std.posix.pid_t = null,
 
-env_map: *const std.process.EnvMap,
+env_map: *const std.process.Environ.Map,
 
 pty: Pty,
 

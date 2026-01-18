@@ -14,16 +14,14 @@ const ActiveSection = enum {
     btm,
 };
 
-pub fn main() !void {
-    var gpa = heap.GeneralPurposeAllocator(.{}){};
-    defer if (gpa.detectLeaks()) log.err("Memory leak detected!", .{});
-    const alloc = gpa.allocator();
+pub fn main(init: std.process.Init) !void {
+    const alloc = init.gpa;
 
     // Users set up below the main function
     const users_buf = try alloc.dupe(User, users[0..]);
 
     var buffer: [1024]u8 = undefined;
-    var tty = try vaxis.Tty.init(&buffer);
+    var tty = try vaxis.Tty.init(init.io, &buffer);
     defer tty.deinit();
     const tty_writer = tty.writer();
     var vx = try vaxis.init(alloc, .{
@@ -40,7 +38,7 @@ pub fn main() !void {
     try loop.start();
     defer loop.stop();
     try vx.enterAltScreen(tty.writer());
-    try vx.queryTerminal(tty.writer(), 250 * std.time.ns_per_ms);
+    try vx.queryTerminal(tty.writer(), init.environ_map, 250 * std.time.ns_per_ms);
 
     const logo =
         \\░█░█░█▀█░█░█░▀█▀░█▀▀░░░▀█▀░█▀█░█▀▄░█░░░█▀▀░

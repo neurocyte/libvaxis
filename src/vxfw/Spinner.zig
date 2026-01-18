@@ -10,6 +10,7 @@ const Spinner = @This();
 const frames: []const []const u8 = &.{ "⣶", "⣧", "⣏", "⡟", "⠿", "⢻", "⣹", "⣼" };
 const time_lapse: u32 = std.time.ms_per_s / 12; // 12 fps
 
+io: std.Io,
 count: std.atomic.Value(u16) = .{ .raw = 0 },
 style: vaxis.Style = .{},
 /// The frame index
@@ -20,11 +21,11 @@ frame: u4 = 0,
 was_spinning: std.atomic.Value(bool) = .{ .raw = false },
 
 /// Start, or add one, to the spinner counter. Thread safe.
-pub fn start(self: *Spinner) ?vxfw.Command {
+pub fn start(self: *Spinner, io: std.Io) ?vxfw.Command {
     self.was_spinning.store(true, .unordered);
     const count = self.count.fetchAdd(1, .monotonic);
     if (count == 0) {
-        return vxfw.Tick.in(time_lapse, self.widget());
+        return vxfw.Tick.in(io, time_lapse, self.widget());
     }
     return null;
 }
@@ -68,7 +69,7 @@ pub fn handleEvent(self: *Spinner, ctx: *vxfw.EventContext, event: vxfw.Event) A
             if (self.frame >= frames.len) self.frame = 0;
 
             // Update rearm
-            try ctx.tick(time_lapse, self.widget());
+            try ctx.tick(self.io, time_lapse, self.widget());
         },
         else => {},
     }
@@ -104,20 +105,20 @@ test Spinner {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
     // Create a spinner
-    var spinner: Spinner = .{};
+    var spinner: Spinner = .{ .io = std.testing.io };
     // Get our widget interface
     const spinner_widget = spinner.widget();
 
     // Start the spinner. This (maybe) returns a Tick command to schedule the next frame. If the
     // spinner is already running, no command is returned. Calling start is thread safe. The
     // returned command can be added to an EventContext to schedule the frame
-    const maybe_cmd = spinner.start();
+    const maybe_cmd = spinner.start(std.testing.io);
     try std.testing.expect(maybe_cmd != null);
     try std.testing.expect(maybe_cmd.? == .tick);
     try std.testing.expectEqual(1, spinner.count.load(.unordered));
 
     // If we call start again, we won't get another command but our counter will go up
-    const maybe_cmd2 = spinner.start();
+    const maybe_cmd2 = spinner.start(std.testing.io);
     try std.testing.expect(maybe_cmd2 == null);
     try std.testing.expectEqual(2, spinner.count.load(.unordered));
 

@@ -2,11 +2,11 @@
     .name = .vaxis,
     .fingerprint = 0x14fbbb94fc556305,
     .version = "0.5.1",
-    .minimum_zig_version = "0.15.1",
+    .minimum_zig_version = "0.16.0-dev.2213+9d1a39c50",
     .dependencies = .{
         .zigimg = .{
-            .url = "git+https://github.com/zigimg/zigimg#eab2522c023b9259db8b13f2f90d609b7437e5f6",
-            .hash = "zigimg-0.1.0-8_eo2vUZFgAAtN1c6dAO5DdqL0d4cEWHtn6iR5ucZJti",
+            .url = "git+https://github.com/neurocyte/zigimg?ref=master#36f77676ce5f4fa445432a1b672d47b51c99b68a",
+            .hash = "zigimg-0.1.0-8_eo2pWKFwCpMKZZhCvRm7u9-W0ay58-Hk1GtHAPuTu9",
         },
         .uucode = .{
             .url = "git+https://github.com/jacobsandlund/uucode?ref=zig-0.16#30ec9dec8854964f09aa4b394c72a47dd0b53d83",

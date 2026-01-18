@@ -51,7 +51,7 @@ allocator: std.mem.Allocator,
 scrollback_size: u16,
 
 pty: Pty,
-pty_writer: std.fs.File.Writer,
+pty_writer: std.Io.File.Writer,
 cmd: Command,
 thread: ?std.Thread = null,
 
@@ -86,7 +86,7 @@ event_queue: Queue = .{},
 pub fn init(
     allocator: std.mem.Allocator,
     argv: []const []const u8,
-    env: *const std.process.EnvMap,
+    env: *const std.process.Environ.Map,
     opts: Options,
     write_buf: []u8,
 ) !Terminal {
@@ -249,7 +249,7 @@ pub fn get_pty_writer(self: *Terminal) *std.Io.Writer {
     return &self.pty_writer.interface;
 }
 
-fn reader(self: *const Terminal, buf: []u8) std.fs.File.Reader {
+fn reader(self: *const Terminal, buf: []u8) std.Io.File.Reader {
     return self.pty.pty.readerStreaming(buf);
 }
 

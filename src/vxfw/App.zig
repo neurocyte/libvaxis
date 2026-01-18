@@ -27,7 +27,7 @@ pub const Options = struct {
 /// Create an application. We require stable pointers to do the set up, so this will create an App
 /// object on the heap. Call destroy when the app is complete to reset terminal state and release
 /// resources
-pub fn init(allocator: Allocator) !App {
+pub fn init(io: std.Io, allocator: Allocator) !App {
     var app: App = .{
         .allocator = allocator,
         .tty = undefined,
@@ -41,7 +41,7 @@ pub fn init(allocator: Allocator) !App {
         .wants_focus = null,
         .buffer = undefined,
     };
-    app.tty = try vaxis.Tty.init(&app.buffer);
+    app.tty = try vaxis.Tty.init(io, &app.buffer);
     return app;
 }
 
@@ -51,7 +51,7 @@ pub fn deinit(self: *App) void {
     self.tty.deinit();
 }
 
-pub fn run(self: *App, widget: vxfw.Widget, opts: Options) anyerror!void {
+pub fn run(self: *App, io: std.Io, environ: *std.process.Environ.Map, widget: vxfw.Widget, opts: Options) anyerror!void {
     const tty = &self.tty;
     const vx = &self.vx;
 
@@ -65,7 +65,7 @@ pub fn run(self: *App, widget: vxfw.Widget, opts: Options) anyerror!void {
     loop.postEvent(.focus_in);
 
     try vx.enterAltScreen(tty.writer());
-    try vx.queryTerminal(tty.writer(), 1 * std.time.ns_per_s);
+    try vx.queryTerminal(tty.writer(), environ, 1 * std.time.ns_per_s);
     try vx.setBracketedPaste(tty.writer(), true);
     try vx.subscribeToColorSchemeUpdates(tty.writer());
 
@@ -97,7 +97,7 @@ pub fn run(self: *App, widget: vxfw.Widget, opts: Options) anyerror!void {
     defer focus_handler.deinit(self.allocator);
 
     // Timestamp of our next frame
-    var next_frame_ms: u64 = @intCast(std.time.milliTimestamp());
+    var next_frame_ms: u64 = @intCast((try std.Io.Clock.real.now(io)).toMilliseconds());
 
     // Create our event context
     var ctx: vxfw.EventContext = .{
@@ -111,17 +111,17 @@ pub fn run(self: *App, widget: vxfw.Widget, opts: Options) anyerror!void {
     defer ctx.cmds.deinit(self.allocator);
 
     while (true) {
-        const now_ms: u64 = @intCast(std.time.milliTimestamp());
+        const now_ms: u64 = @intCast((try std.Io.Clock.real.now(io)).toMilliseconds());
         if (now_ms >= next_frame_ms) {
             // Deadline exceeded. Schedule the next frame
             next_frame_ms = now_ms + tick_ms;
         } else {
             // Sleep until the deadline
-            std.Thread.sleep((next_frame_ms - now_ms) * std.time.ns_per_ms);
+            try io.sleep(std.Io.Duration.fromMilliseconds(@intCast(next_frame_ms - now_ms)), std.Io.Clock.real);
             next_frame_ms += tick_ms;
         }
 
-        try self.checkTimers(&ctx);
+        try self.checkTimers(io, &ctx);
 
         {
             loop.queue.lock();
@@ -295,8 +295,9 @@ fn handleCommand(self: *App, cmds: *vxfw.CommandList) Allocator.Error!void {
     }
 }
 
-fn checkTimers(self: *App, ctx: *vxfw.EventContext) anyerror!void {
-    const now_ms = std.time.milliTimestamp();
+fn checkTimers(self: *App, io: std.Io, ctx: *vxfw.EventContext) anyerror!void {
+    const now = std.Io.Clock.real.now(io) catch |e| std.debug.panic("vxfw clock error: {t}", .{e});
+    const now_ms = now.toMilliseconds();
 
     // timers are always sorted descending
     while (self.timers.pop()) |tick| {
@@ -463,8 +464,8 @@ const MouseHandler = struct {
         ctx.phase = .capturing;
         for (hits.items) |item| {
             var m_local = mouse;
-            m_local.col = item.local.col;
-            m_local.row = item.local.row;
+            m_local.col = @intCast(item.local.col);
+            m_local.row = @intCast(item.local.row);
             try item.widget.captureEvent(ctx, .{ .mouse = m_local });
             try app.handleCommand(&ctx.cmds);
 
@@ -475,8 +476,8 @@ const MouseHandler = struct {
         ctx.phase = .at_target;
         {
             var m_local = mouse;
-            m_local.col = target.local.col;
-            m_local.row = target.local.row;
+            m_local.col = @intCast(target.local.col);
+            m_local.row = @intCast(target.local.row);
             try target.widget.handleEvent(ctx, .{ .mouse = m_local });
             try app.handleCommand(&ctx.cmds);
 
@@ -487,8 +488,8 @@ const MouseHandler = struct {
         ctx.phase = .bubbling;
         while (hits.pop()) |item| {
             var m_local = mouse;
-            m_local.col = item.local.col;
-            m_local.row = item.local.row;
+            m_local.col = @intCast(item.local.col);
+            m_local.row = @intCast(item.local.row);
             try item.widget.handleEvent(ctx, .{ .mouse = m_local });
             try app.handleCommand(&ctx.cmds);
 

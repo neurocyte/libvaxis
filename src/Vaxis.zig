@@ -3,7 +3,7 @@ const builtin = @import("builtin");
 const atomic = std.atomic;
 const base64Encoder = std.base64.standard.Encoder;
 const zigimg = @import("zigimg");
-const IoWriter = std.io.Writer;
+const IoWriter = std.Io.Writer;
 
 const Cell = @import("Cell.zig");
 const Image = @import("Image.zig");
@@ -247,12 +247,12 @@ pub fn exitAltScreen(self: *Vaxis, tty: *IoWriter) !void {
 ///
 /// This call will block until Vaxis.query_futex is woken up, or the timeout.
 /// Event loops can wake up this futex when cap_da1 is received
-pub fn queryTerminal(self: *Vaxis, tty: *IoWriter, timeout_ns: u64) !void {
+pub fn queryTerminal(self: *Vaxis, tty: *IoWriter, environ: *std.process.Environ.Map, timeout_ns: u64) !void {
     try self.queryTerminalSend(tty);
     // 1 second timeout
     std.Thread.Futex.timedWait(&self.query_futex, 0, timeout_ns) catch {};
     self.queries_done.store(true, .unordered);
-    try self.enableDetectedFeatures(tty);
+    try self.enableDetectedFeatures(tty, environ);
 }
 
 /// write queries to the terminal to determine capabilities. This function
@@ -309,7 +309,7 @@ pub fn queryTerminalSend(vx: *Vaxis, tty: *IoWriter) !void {
 /// Enable features detected by responses to queryTerminal. This function
 /// is only for use with a custom main loop. Call Vaxis.queryTerminal() if
 /// you are using Loop.run()
-pub fn enableDetectedFeatures(self: *Vaxis, tty: *IoWriter) !void {
+pub fn enableDetectedFeatures(self: *Vaxis, tty: *IoWriter, environ: *std.process.Environ.Map) !void {
     switch (builtin.os.tag) {
         .windows => {
             // No feature detection on windows. We just hard enable some knowns for ConPTY
@@ -317,22 +317,22 @@ pub fn enableDetectedFeatures(self: *Vaxis, tty: *IoWriter) !void {
         },
         else => {
             // Apply any environment variables
-            if (std.posix.getenv("TERMUX_VERSION")) |_|
+            if (environ.get("TERMUX_VERSION")) |_|
                 self.sgr = .legacy;
-            if (std.posix.getenv("VHS_RECORD")) |_| {
+            if (environ.get("VHS_RECORD")) |_| {
                 self.caps.unicode = .wcwidth;
                 self.caps.kitty_keyboard = false;
                 self.sgr = .legacy;
             }
-            if (std.posix.getenv("TERM_PROGRAM")) |prg| {
+            if (environ.get("TERM_PROGRAM")) |prg| {
                 if (std.mem.eql(u8, prg, "vscode"))
                     self.sgr = .legacy;
             }
-            if (std.posix.getenv("VAXIS_FORCE_LEGACY_SGR")) |_|
+            if (environ.get("VAXIS_FORCE_LEGACY_SGR")) |_|
                 self.sgr = .legacy;
-            if (std.posix.getenv("VAXIS_FORCE_WCWIDTH")) |_|
+            if (environ.get("VAXIS_FORCE_WCWIDTH")) |_|
                 self.caps.unicode = .wcwidth;
-            if (std.posix.getenv("VAXIS_FORCE_UNICODE")) |_|
+            if (environ.get("VAXIS_FORCE_UNICODE")) |_|
                 self.caps.unicode = .unicode;
 
             // enable detected features
@@ -1047,6 +1047,7 @@ pub fn transmitImage(
 
 pub fn loadImage(
     self: *Vaxis,
+    io: std.Io,
     alloc: std.mem.Allocator,
     tty: *IoWriter,
     src: Image.Source,
@@ -1055,7 +1056,7 @@ pub fn loadImage(
 
     var read_buffer: [1024 * 1024]u8 = undefined; // 1MB buffer
     var img = switch (src) {
-        .path => |path| try zigimg.Image.fromFilePath(alloc, path, &read_buffer),
+        .path => |path| try zigimg.Image.fromFilePath(io, alloc, path, &read_buffer),
         .mem => |bytes| try zigimg.Image.fromMemory(alloc, bytes),
     };
     defer img.deinit(alloc);
@@ -1443,11 +1444,11 @@ pub fn setTerminalWorkingDirectory(_: *Vaxis, tty: *IoWriter, path: []const u8) 
 
 test "render: no output when no changes" {
     var vx = try Vaxis.init(std.testing.allocator, .{});
-    var deinit_writer = std.io.Writer.Allocating.init(std.testing.allocator);
+    var deinit_writer = std.Io.Writer.Allocating.init(std.testing.allocator);
     defer deinit_writer.deinit();
     defer vx.deinit(std.testing.allocator, &deinit_writer.writer);
 
-    var render_writer = std.io.Writer.Allocating.init(std.testing.allocator);
+    var render_writer = std.Io.Writer.Allocating.init(std.testing.allocator);
     defer render_writer.deinit();
     try vx.render(&render_writer.writer);
     const output = try render_writer.toOwnedSlice();

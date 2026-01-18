@@ -5,7 +5,6 @@ const vxfw = vaxis.vxfw;
 const Model = struct {
     list: std.ArrayList(vxfw.Text),
     /// Memory owned by .arena
-    filtered: std.ArrayList(vxfw.RichText),
     list_view: vxfw.ListView,
     text_field: vxfw.TextField,
 
@@ -201,29 +200,27 @@ fn toLower(arena: std.mem.Allocator, src: []const u8) std.mem.Allocator.Error![]
     return lower;
 }
 
-pub fn main() !void {
-    var debug_allocator = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = debug_allocator.deinit();
+pub fn main(init: std.process.Init) !void {
+    const gpa = init.gpa;
 
-    const gpa = debug_allocator.allocator();
-
-    var app = try vxfw.App.init(gpa);
+    var app = try vxfw.App.init(init.io, gpa);
     errdefer app.deinit();
 
     const model = try Model.init(gpa);
     defer model.deinit(gpa);
 
     // Run the command
-    var fd = std.process.Child.init(&.{"fd"}, gpa);
-    fd.stdout_behavior = .Pipe;
-    fd.stderr_behavior = .Pipe;
+    var fd = try std.process.spawn(init.io, .{
+        .argv = &.{"fd"},
+        .stdout = .pipe,
+        .stderr = .pipe,
+    });
     var stdout = std.ArrayList(u8).empty;
     var stderr = std.ArrayList(u8).empty;
     defer stdout.deinit(gpa);
     defer stderr.deinit(gpa);
-    try fd.spawn();
     try fd.collectOutput(gpa, &stdout, &stderr, 10_000_000);
-    _ = try fd.wait();
+    _ = try fd.wait(init.io);
 
     var iter = std.mem.splitScalar(u8, stdout.items, '\n');
     while (iter.next()) |line| {
@@ -231,12 +228,15 @@ pub fn main() !void {
         try model.list.append(gpa, .{ .text = line });
     }
 
-    try app.run(model.widget(), .{});
+    try app.run(init.io, init.environ_map, model.widget(), .{});
     app.deinit();
 
     if (model.result.len > 0) {
-        _ = try std.posix.write(std.posix.STDOUT_FILENO, model.result);
-        _ = try std.posix.write(std.posix.STDOUT_FILENO, "\n");
+        var buf: [4096]u8 = undefined;
+        var writer = std.Io.File.stdout().writer(init.io, &buf);
+        try writer.interface.writeAll(model.result);
+        try writer.interface.writeAll("\n");
+        try writer.interface.flush();
     } else {
         std.process.exit(130);
     }

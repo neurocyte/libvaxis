@@ -400,5 +400,6 @@ test Loop {
 
     // Optionally enter the alternate screen
     try vx.enterAltScreen(tty.writer());
-    try vx.queryTerminal(tty.writer(), 1 * std.time.ns_per_ms);
+    var environ: std.process.Environ.Map = .init(std.testing.allocator);
+    try vx.queryTerminal(tty.writer(), &environ, 1 * std.time.ns_per_ms);
 }

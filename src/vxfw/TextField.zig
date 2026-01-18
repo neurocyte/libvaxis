@@ -346,7 +346,7 @@ pub fn deleteAfterCursor(self: *TextField) void {
 /// Moves the cursor backward by words. If the character before the cursor is a space, the cursor is
 /// positioned just after the next previous space
 pub fn moveBackwardWordwise(self: *TextField) void {
-    const trimmed = std.mem.trimRight(u8, self.buf.firstHalf(), " ");
+    const trimmed = std.mem.trimEnd(u8, self.buf.firstHalf(), " ");
     const idx = if (std.mem.lastIndexOfScalar(u8, trimmed, ' ')) |last|
         last + 1
     else

@@ -202,7 +202,7 @@ test "Try to pop, fill from another thread" {
     thread.join();
 }
 
-fn sleepyPop(q: *Queue(u8, 2), state: *atomic.Value(u8)) !void {
+fn sleepyPop(io: std.Io, q: *Queue(u8, 2), state: *atomic.Value(u8)) !void {
     // First we wait for the queue to be full.
     while (state.load(.acquire) < 1)
         try Thread.yield();
@@ -218,7 +218,7 @@ fn sleepyPop(q: *Queue(u8, 2), state: *atomic.Value(u8)) !void {
     // still full and the push in the other thread is still blocked
     // waiting for space.
     try Thread.yield();
-    std.Thread.sleep(10 * std.time.ns_per_ms);
+    try io.sleep(std.Io.Duration.fromMilliseconds(10), std.Io.Clock.real);
     // Finally, let that other thread go.
     try std.testing.expectEqual(1, q.pop());
 
@@ -227,7 +227,7 @@ fn sleepyPop(q: *Queue(u8, 2), state: *atomic.Value(u8)) !void {
         try Thread.yield();
     // But we want to ensure that there's a second push waiting, so
     // here's another sleep.
-    std.Thread.sleep(10 * std.time.ns_per_ms);
+    try io.sleep(std.Io.Duration.fromMilliseconds(10), std.Io.Clock.real);
 
     // Another spurious wake...
     q.not_full.signal();
@@ -235,7 +235,7 @@ fn sleepyPop(q: *Queue(u8, 2), state: *atomic.Value(u8)) !void {
     // And another chance for the other thread to see that it's
     // spurious and go back to sleep.
     try Thread.yield();
-    std.Thread.sleep(10 * std.time.ns_per_ms);
+    try io.sleep(std.Io.Duration.fromMilliseconds(10), std.Io.Clock.real);
 
     // Pop that thing and we're done.
     try std.testing.expectEqual(2, q.pop());
@@ -250,13 +250,13 @@ test "Fill, block, fill, block" {
 
     var queue: Queue(u8, 2) = .{};
     var state = atomic.Value(u8).init(0);
-    const thread = try Thread.spawn(cfg, sleepyPop, .{ &queue, &state });
+    const thread = try Thread.spawn(cfg, sleepyPop, .{ std.testing.io, &queue, &state });
     queue.push(1);
     queue.push(2);
     state.store(1, .release);
-    const now = std.time.milliTimestamp();
+    const now = (try std.Io.Clock.real.now(std.testing.io)).toMilliseconds();
     queue.push(3); // This one should block.
-    const then = std.time.milliTimestamp();
+    const then = (try std.Io.Clock.real.now(std.testing.io)).toMilliseconds();
 
     // Just to make sure the sleeps are yielding to this thread, make
     // sure it took at least 5ms to do the push.
@@ -272,17 +272,17 @@ test "Fill, block, fill, block" {
     try std.testing.expectEqual(4, queue.pop());
 }
 
-fn sleepyPush(q: *Queue(u8, 1), state: *atomic.Value(u8)) !void {
+fn sleepyPush(io: std.Io, q: *Queue(u8, 1), state: *atomic.Value(u8)) !void {
     // Try to ensure the other thread has already started trying to pop.
     try Thread.yield();
-    std.Thread.sleep(10 * std.time.ns_per_ms);
+    try io.sleep(std.Io.Duration.fromMilliseconds(10), std.Io.Clock.real);
 
     // Spurious wake
     q.not_full.signal();
     q.not_empty.signal();
 
     try Thread.yield();
-    std.Thread.sleep(10 * std.time.ns_per_ms);
+    try io.sleep(std.Io.Duration.fromMilliseconds(10), std.Io.Clock.real);
 
     // Stick something in the queue so it can be popped.
     q.push(1);
@@ -291,7 +291,7 @@ fn sleepyPush(q: *Queue(u8, 1), state: *atomic.Value(u8)) !void {
         try Thread.yield();
     // Give the other thread time to block again.
     try Thread.yield();
-    std.Thread.sleep(10 * std.time.ns_per_ms);
+    try io.sleep(std.Io.Duration.fromMilliseconds(10), std.Io.Clock.real);
 
     // Spurious wake
     q.not_full.signal();
@@ -307,7 +307,7 @@ test "Drain, block, drain, block" {
 
     var queue: Queue(u8, 1) = .{};
     var state = atomic.Value(u8).init(0);
-    const thread = try Thread.spawn(cfg, sleepyPush, .{ &queue, &state });
+    const thread = try Thread.spawn(cfg, sleepyPush, .{ std.testing.io, &queue, &state });
     try std.testing.expectEqual(1, queue.pop());
     state.store(1, .release);
     try std.testing.expectEqual(2, queue.pop());
@@ -324,7 +324,7 @@ test "2 readers" {
     const t1 = try Thread.spawn(cfg, readerThread, .{&queue});
     const t2 = try Thread.spawn(cfg, readerThread, .{&queue});
     try Thread.yield();
-    std.Thread.sleep(10 * std.time.ns_per_ms);
+    try std.testing.io.sleep(std.Io.Duration.fromMilliseconds(10), std.Io.Clock.real);
     queue.push(1);
     queue.push(1);
     t1.join();

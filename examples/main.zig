@@ -3,19 +3,12 @@ const vaxis = @import("vaxis");
 const Cell = vaxis.Cell;
 
 const log = std.log.scoped(.main);
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer {
-        const deinit_status = gpa.deinit();
-        //fail test; can't try in defer as defer is executed after we return
-        if (deinit_status == .leak) {
-            log.err("memory leak", .{});
-        }
-    }
-    const alloc = gpa.allocator();
+
+pub fn main(init: std.process.Init) !void {
+    const alloc = init.gpa;
 
     var buffer: [1024]u8 = undefined;
-    var tty = try vaxis.Tty.init(&buffer);
+    var tty = try vaxis.Tty.init(init.io, &buffer);
     defer tty.deinit();
 
     var vx = try vaxis.init(alloc, .{});
@@ -29,7 +22,7 @@ pub fn main() !void {
 
     // Optionally enter the alternate screen
     try vx.enterAltScreen(tty.writer());
-    try vx.queryTerminal(tty.writer(), 1 * std.time.ns_per_s);
+    try vx.queryTerminal(tty.writer(), init.environ_map, 1 * std.time.ns_per_s);
 
     // We'll adjust the color index every keypress
     var color_idx: u8 = 0;

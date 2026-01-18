@@ -49,13 +49,10 @@ const Model = struct {
     }
 };
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
+pub fn main(init: std.process.Init) !void {
+    const allocator = init.gpa;
 
-    const allocator = gpa.allocator();
-
-    var app = try vxfw.App.init(allocator);
+    var app = try vxfw.App.init(init.io, allocator);
     defer app.deinit();
 
     const model = try allocator.create(Model);
@@ -69,5 +66,5 @@ pub fn main() !void {
     model.split.lhs = model.lhs.widget();
     model.split.rhs = model.rhs.widget();
 
-    try app.run(model.widget(), .{});
+    try app.run(init.io, init.environ_map, model.widget(), .{});
 }

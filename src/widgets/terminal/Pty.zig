@@ -7,8 +7,8 @@ const Winsize = @import("../../main.zig").Winsize;
 
 const posix = std.posix;
 
-pty: std.fs.File,
-tty: std.fs.File,
+pty: std.Io.File,
+tty: std.Io.File,
 
 /// opens a new tty/pty pair
 pub fn init() !Pty {
