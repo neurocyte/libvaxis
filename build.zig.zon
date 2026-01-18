@@ -9,8 +9,8 @@
             .hash = "zigimg-0.1.0-8_eo2vUZFgAAtN1c6dAO5DdqL0d4cEWHtn6iR5ucZJti",
         },
         .uucode = .{
-            .url = "git+https://github.com/jacobsandlund/uucode#5f05f8f83a75caea201f12cc8ea32a2d82ea9732",
-            .hash = "uucode-0.1.0-ZZjBPj96QADXyt5sqwBJUnhaDYs_qBeeKijZvlRa0eqM",
+            .url = "git+https://github.com/jacobsandlund/uucode?ref=zig-0.16#30ec9dec8854964f09aa4b394c72a47dd0b53d83",
+            .hash = "uucode-0.1.0-ZZjBPphWUABH_ChjdEku1Vplc1Y107C0GvgGJk8HrX8Z",
         },
     },
     .paths = .{
