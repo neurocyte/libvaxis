@@ -16,6 +16,7 @@ pub fn Loop(comptime T: type) type {
 
         const Event = T;
 
+        io: std.Io,
         tty: *Tty,
         vaxis: *Vaxis,
 
@@ -65,8 +66,8 @@ pub fn Loop(comptime T: type) type {
         }
 
         /// returns the next available event, blocking until one is available
-        pub fn nextEvent(self: *Self) T {
-            return self.queue.pop();
+        pub fn nextEvent(self: *Self, io: std.Io) T {
+            return self.queue.pop(io);
         }
 
         /// blocks until an event is available. Useful when your application is
@@ -82,8 +83,8 @@ pub fn Loop(comptime T: type) type {
 
         /// posts an event into the event queue. Will block if there is not
         /// capacity for the event
-        pub fn postEvent(self: *Self, event: T) void {
-            self.queue.push(event);
+        pub fn postEvent(self: *Self, io: std.Io, event: T) void {
+            self.queue.push(io, event);
         }
 
         pub fn tryPostEvent(self: *Self, event: T) bool {
@@ -97,7 +98,7 @@ pub fn Loop(comptime T: type) type {
 
             const winsize = Tty.getWinsize(self.tty.fd) catch return;
             if (@hasField(Event, "winsize")) {
-                self.postEvent(.{ .winsize = winsize });
+                self.postEvent(self.io, .{ .winsize = winsize });
             }
         }
 
@@ -124,7 +125,7 @@ pub fn Loop(comptime T: type) type {
                     // get our initial winsize
                     const winsize = try Tty.getWinsize(self.tty.fd);
                     if (@hasField(Event, "winsize")) {
-                        self.postEvent(.{ .winsize = winsize });
+                        self.postEvent(self.io, .{ .winsize = winsize });
                     }
 
                     var parser: Parser = .{};
@@ -266,7 +267,7 @@ pub fn handleEventGeneric(self: anytype, vx: *Vaxis, cache: *GraphemeCache, Even
                         if (key.text) |text| {
                             mut_key.text = cache.put(text);
                         }
-                        return self.postEvent(.{ .key_press = mut_key });
+                        return self.postEvent(self.io, .{ .key_press = mut_key });
                     }
                 },
                 .key_release => |key| {
@@ -276,42 +277,42 @@ pub fn handleEventGeneric(self: anytype, vx: *Vaxis, cache: *GraphemeCache, Even
                         if (key.text) |text| {
                             mut_key.text = cache.put(text);
                         }
-                        return self.postEvent(.{ .key_release = mut_key });
+                        return self.postEvent(self.io, .{ .key_release = mut_key });
                     }
                 },
                 .mouse => |mouse| {
                     if (@hasField(Event, "mouse")) {
-                        return self.postEvent(.{ .mouse = vx.translateMouse(mouse) });
+                        return self.postEvent(self.io, .{ .mouse = vx.translateMouse(mouse) });
                     }
                 },
                 .mouse_leave => {
                     if (@hasField(Event, "mouse_leave")) {
-                        return self.postEvent(.mouse_leave);
+                        return self.postEvent(self.io, .mouse_leave);
                     }
                 },
                 .focus_in => {
                     if (@hasField(Event, "focus_in")) {
-                        return self.postEvent(.focus_in);
+                        return self.postEvent(self.io, .focus_in);
                     }
                 },
                 .focus_out => {
                     if (@hasField(Event, "focus_out")) {
-                        return self.postEvent(.focus_out);
+                        return self.postEvent(self.io, .focus_out);
                     }
                 },
                 .paste_start => {
                     if (@hasField(Event, "paste_start")) {
-                        return self.postEvent(.paste_start);
+                        return self.postEvent(self.io, .paste_start);
                     }
                 },
                 .paste_end => {
                     if (@hasField(Event, "paste_end")) {
-                        return self.postEvent(.paste_end);
+                        return self.postEvent(self.io, .paste_end);
                     }
                 },
                 .paste => |text| {
                     if (@hasField(Event, "paste")) {
-                        return self.postEvent(.{ .paste = text });
+                        return self.postEvent(self.io, .{ .paste = text });
                     } else {
                         if (paste_allocator) |_|
                             paste_allocator.?.free(text);
@@ -319,12 +320,12 @@ pub fn handleEventGeneric(self: anytype, vx: *Vaxis, cache: *GraphemeCache, Even
                 },
                 .color_report => |report| {
                     if (@hasField(Event, "color_report")) {
-                        return self.postEvent(.{ .color_report = report });
+                        return self.postEvent(self.io, .{ .color_report = report });
                     }
                 },
                 .color_scheme => |scheme| {
                     if (@hasField(Event, "color_scheme")) {
-                        return self.postEvent(.{ .color_scheme = scheme });
+                        return self.postEvent(self.io, .{ .color_scheme = scheme });
                     }
                 },
                 .cap_kitty_keyboard => {
@@ -359,7 +360,7 @@ pub fn handleEventGeneric(self: anytype, vx: *Vaxis, cache: *GraphemeCache, Even
                     vx.caps.multi_cursor = true;
                 },
                 .cap_da1 => {
-                    std.Thread.Futex.wake(&vx.query_futex, 10);
+                    self.io.futexWake(u32, &vx.query_futex.raw, 10);
                     vx.queries_done.store(true, .unordered);
                 },
                 .winsize => |winsize| {
@@ -370,7 +371,7 @@ pub fn handleEventGeneric(self: anytype, vx: *Vaxis, cache: *GraphemeCache, Even
                         else => Tty.resetSignalHandler(),
                     }
                     if (@hasField(Event, "winsize")) {
-                        return self.postEvent(.{ .winsize = winsize });
+                        return self.postEvent(self.io, .{ .winsize = winsize });
                     }
                 },
             }

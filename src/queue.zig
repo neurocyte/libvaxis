@@ -1,7 +1,7 @@
 const std = @import("std");
 const assert = std.debug.assert;
 const atomic = std.atomic;
-const Condition = std.Thread.Condition;
+const Condition = std.Io.Condition;
 
 /// Thread safe. Fixed size. Blocking push and pop.
 pub fn Queue(
@@ -14,35 +14,35 @@ pub fn Queue(
         read_index: usize = 0,
         write_index: usize = 0,
 
-        mutex: std.Thread.Mutex = .{},
+        mutex: std.Io.Mutex = .init,
         // blocks when the buffer is full
-        not_full: Condition = .{},
+        not_full: Condition = .init,
         // ...or empty
-        not_empty: Condition = .{},
+        not_empty: Condition = .init,
 
         const Self = @This();
 
         /// Pop an item from the queue. Blocks until an item is available.
-        pub fn pop(self: *Self) T {
-            self.mutex.lock();
-            defer self.mutex.unlock();
+        pub fn pop(self: *Self, io: std.Io) T {
+            self.mutex.lockUncancelable(io);
+            defer self.mutex.unlock(io);
             while (self.isEmptyLH()) {
-                self.not_empty.wait(&self.mutex);
+                self.not_empty.waitUncancelable(io, &self.mutex);
             }
             std.debug.assert(!self.isEmptyLH());
-            return self.popAndSignalLH();
+            return self.popAndSignalLH(io);
         }
 
         /// Push an item into the queue. Blocks until an item has been
         /// put in the queue.
-        pub fn push(self: *Self, item: T) void {
-            self.mutex.lock();
-            defer self.mutex.unlock();
+        pub fn push(self: *Self, io: std.Io, item: T) void {
+            self.mutex.lockUncancelable(io);
+            defer self.mutex.unlock(io);
             while (self.isFullLH()) {
-                self.not_full.wait(&self.mutex);
+                self.not_full.waitUncancelable(io, &self.mutex);
             }
             std.debug.assert(!self.isFullLH());
-            self.pushAndSignalLH(item);
+            self.pushAndSignalLH(io, item);
         }
 
         /// Push an item into the queue. Returns true when the item
@@ -130,20 +130,20 @@ pub fn Queue(
             return index % (2 * self.buf.len);
         }
 
-        fn pushAndSignalLH(self: *Self, item: T) void {
+        fn pushAndSignalLH(self: *Self, io: std.Io, item: T) void {
             const was_empty = self.isEmptyLH();
             self.buf[self.mask(self.write_index)] = item;
             self.write_index = self.mask2(self.write_index + 1);
             if (was_empty) {
-                self.not_empty.signal();
+                self.not_empty.signal(io);
             }
         }
 
-        fn popAndSignalLH(self: *Self) T {
+        fn popAndSignalLH(self: *Self, io: std.Io) T {
             const was_full = self.isFullLH();
             const result = self.popLH();
             if (was_full) {
-                self.not_full.signal();
+                self.not_full.signal(io);
             }
             return result;
         }

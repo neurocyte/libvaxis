@@ -43,8 +43,9 @@ pub const PosixTty = struct {
 
     /// global signal handlers
     var handlers: [8]SignalHandler = undefined;
-    var handler_mutex: std.Thread.Mutex = .{};
+    var handler_mutex: std.Io.Mutex = .init;
     var handler_idx: usize = 0;
+    var handler_io: std.Io.Threaded = .init_single_threaded;
 
     var handler_installed: bool = false;
 
@@ -54,8 +55,8 @@ pub const PosixTty = struct {
     pub fn init(io: std.Io, buffer: []u8) !PosixTty {
         // Open our tty
 
-        const tty_file = try (try std.Io.Dir.openDirAbsolute(io, "/dev/", .{})).openFile(io, "tty", .{ .allow_ctty = true, .mode = .read_write });
-        const fd = tty_file.handle;
+        const file = try (try std.Io.Dir.openDirAbsolute(io, "/dev/", .{})).openFile(io, "tty", .{ .allow_ctty = true, .mode = .read_write });
+        const fd = file.handle;
 
         // Set the termios of the tty
         const termios = try makeRaw(fd);
@@ -70,8 +71,6 @@ pub const PosixTty = struct {
         };
         posix.sigaction(posix.SIG.WINCH, &act, null);
         handler_installed = true;
-
-        const file = std.Io.File{ .handle = fd };
 
         const self: PosixTty = .{
             .fd = fd,
@@ -119,16 +118,16 @@ pub const PosixTty = struct {
     /// Install a signal handler for winsize. A maximum of 8 handlers may be
     /// installed
     pub fn notifyWinsize(handler: SignalHandler) !void {
-        handler_mutex.lock();
-        defer handler_mutex.unlock();
+        handler_mutex.lock(handler_io.io()) catch @panic("notifyWinsize");
+        defer handler_mutex.unlock(handler_io.io());
         if (handler_idx == handlers.len) return error.OutOfMemory;
         handlers[handler_idx] = handler;
         handler_idx += 1;
     }
 
     fn handleWinch(_: std.os.linux.SIG) callconv(.c) void {
-        handler_mutex.lock();
-        defer handler_mutex.unlock();
+        handler_mutex.lock(handler_io.io()) catch @panic("handleWinch");
+        defer handler_mutex.unlock(handler_io.io());
         var i: usize = 0;
         while (i < handler_idx) : (i += 1) {
             const handler = handlers[i];

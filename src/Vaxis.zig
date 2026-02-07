@@ -247,10 +247,13 @@ pub fn exitAltScreen(self: *Vaxis, tty: *IoWriter) !void {
 ///
 /// This call will block until Vaxis.query_futex is woken up, or the timeout.
 /// Event loops can wake up this futex when cap_da1 is received
-pub fn queryTerminal(self: *Vaxis, tty: *IoWriter, environ: *std.process.Environ.Map, timeout_ns: u64) !void {
+pub fn queryTerminal(self: *Vaxis, io: std.Io, tty: *IoWriter, environ: *std.process.Environ.Map, timeout_ns: u64) !void {
     try self.queryTerminalSend(tty);
     // 1 second timeout
-    std.Thread.Futex.timedWait(&self.query_futex, 0, timeout_ns) catch {};
+    io.futexWaitTimeout(u32, &self.query_futex.raw, 0, .{ .deadline = .fromNow(io, .{
+        .raw = .fromNanoseconds(timeout_ns),
+        .clock = .awake,
+    }) }) catch {};
     self.queries_done.store(true, .unordered);
     try self.enableDetectedFeatures(tty, environ);
 }
