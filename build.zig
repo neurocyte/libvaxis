@@ -22,6 +22,8 @@ pub fn build(b: *std.Build) void {
             "simple_uppercase_mapping",
             "simple_lowercase_mapping",
             "is_lowercase",
+            "changes_when_casefolded",
+            "changes_when_lowercased",
         }),
     });
 
