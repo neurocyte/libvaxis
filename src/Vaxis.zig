@@ -833,13 +833,20 @@ pub fn render(self: *Vaxis, tty: *std.Io.Writer) !void {
     if (self.screen.cursor_shape != self.screen_last.cursor_shape) {
         try tty.print(
             ctlseqs.cursor_shape,
-            .{@intFromEnum(self.screen.cursor_shape)},
+            .{decscusrCode(self.screen.cursor_shape)},
         );
         self.screen_last.cursor_shape = self.screen.cursor_shape;
     }
 
     try tty.writeAll(ctlseqs.sync_reset);
     try tty.flush();
+}
+
+fn decscusrCode(shape: Cell.CursorShape) u8 {
+    return switch (shape) {
+        .unfocused => @intFromEnum(Cell.CursorShape.block),
+        else => @intFromEnum(shape),
+    };
 }
 
 fn enableKittyKeyboard(self: *Vaxis, tty: *std.Io.Writer, flags: Key.KittyFlags) !void {

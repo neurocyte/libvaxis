@@ -35,6 +35,9 @@ pub const CursorShape = enum {
     underline,
     beam_blink,
     beam,
+    // .unfocused is simply mapped to .block when output to TTY, but
+    // maybe useful for application logic or non-TTY renderering
+    unfocused,
 };
 
 pub const Hyperlink = struct {
