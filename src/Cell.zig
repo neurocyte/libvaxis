@@ -87,6 +87,8 @@ pub const Style = struct {
     reverse: bool = false,
     invisible: bool = false,
     strikethrough: bool = false,
+    // extra style bit used only by Flow's GL renderer
+    glyph_alpha_from_bg: bool = false,
 
     pub fn eql(a: Style, b: Style) bool {
         const SGRBits = packed struct {
@@ -97,6 +99,7 @@ pub const Style = struct {
             reverse: bool,
             invisible: bool,
             strikethrough: bool,
+            glyph_alpha_from_bg: bool,
         };
         const a_sgr: SGRBits = .{
             .bold = a.bold,
@@ -106,6 +109,7 @@ pub const Style = struct {
             .reverse = a.reverse,
             .invisible = a.invisible,
             .strikethrough = a.strikethrough,
+            .glyph_alpha_from_bg = a.glyph_alpha_from_bg,
         };
         const b_sgr: SGRBits = .{
             .bold = b.bold,
@@ -115,6 +119,7 @@ pub const Style = struct {
             .reverse = b.reverse,
             .invisible = b.invisible,
             .strikethrough = b.strikethrough,
+            .glyph_alpha_from_bg = b.glyph_alpha_from_bg,
         };
         return a_sgr == b_sgr and
             Color.eql(a.fg, b.fg) and
