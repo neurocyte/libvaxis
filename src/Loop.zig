@@ -220,7 +220,7 @@ pub fn handleEventGeneric(self: anytype, vx: *Vaxis, cache: *GraphemeCache, Even
                         log.info("explicit width capability detected", .{});
                         vx.caps.explicit_width = true;
                         vx.caps.unicode = .unicode;
-                        vx.screen.width_method = .unicode;
+                        vx.screen.width_method = vx.caps.widthMethod();
                         return;
                     }
                     // Check for a cursor position response for our scaled text query. This will
@@ -286,7 +286,7 @@ pub fn handleEventGeneric(self: anytype, vx: *Vaxis, cache: *GraphemeCache, Even
                         log.info("explicit width capability detected", .{});
                         vx.caps.explicit_width = true;
                         vx.caps.unicode = .unicode;
-                        vx.screen.width_method = .unicode;
+                        vx.screen.width_method = vx.caps.widthMethod();
                         return;
                     }
                     // Check for a cursor position response for our scaled text query. This will
@@ -383,7 +383,7 @@ pub fn handleEventGeneric(self: anytype, vx: *Vaxis, cache: *GraphemeCache, Even
                 .cap_unicode => {
                     log.info("unicode capability detected", .{});
                     vx.caps.unicode = .unicode;
-                    vx.screen.width_method = .unicode;
+                    vx.screen.width_method = vx.caps.widthMethod();
                 },
                 .cap_sgr_pixels => {
                     log.info("pixel mouse capability detected", .{});

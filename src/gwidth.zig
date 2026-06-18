@@ -6,6 +6,9 @@ const uucode = @import("uucode");
 /// the method to use when calculating the width of a grapheme
 pub const Method = enum {
     unicode,
+    /// Like `unicode`, but additionally treats bare `Emoji_Modifier_Base`
+    /// codepoints as double-width, like kitty does.
+    unicode_explicit,
     wcwidth,
     no_zwj,
 };
@@ -48,7 +51,7 @@ fn eawToWidth(cp: u21, eaw: uucode.types.EastAsianWidth) i16 {
 /// returns the width of the provided string, as measured by the method chosen
 pub fn gwidth(str: []const u8, method: Method) u16 {
     switch (method) {
-        .unicode => {
+        .unicode, .unicode_explicit => {
             var total: u16 = 0;
             var grapheme_iter = uucode.grapheme.Iterator(uucode.utf8.Iterator).init(.init(str));
 
@@ -73,6 +76,7 @@ pub fn gwidth(str: []const u8, method: Method) u16 {
                     var has_emoji_vs: bool = false;
                     var has_text_vs: bool = false;
                     var has_emoji_presentation: bool = false;
+                    var has_emoji_modifier_base: bool = false;
                     var ri_count: u8 = 0;
 
                     while (g_iter.next()) |cp| {
@@ -93,6 +97,14 @@ pub fn gwidth(str: []const u8, method: Method) u16 {
                             has_emoji_presentation = true;
                         }
 
+                        // Emoji modifier bases are double-width even
+                        // without an emoji presentation selector (kitty
+                        // style). Only applied when the application uses
+                        // explicit-widths.
+                        if (method == .unicode_explicit and uucode.get(.is_emoji_modifier_base, cp)) {
+                            has_emoji_modifier_base = true;
+                        }
+
                         // Count regional indicators (for flag emojis)
                         if (cp >= 0x1F1E6 and cp <= 0x1F1FF) {
                             ri_count += 1;
@@ -108,8 +120,8 @@ pub fn gwidth(str: []const u8, method: Method) u16 {
                     if (has_text_vs) {
                         // Text presentation explicit - keep width as-is (usually 1)
                         width = @max(1, width);
-                    } else if (has_emoji_vs or has_emoji_presentation or ri_count == 2) {
-                        // Emoji presentation or flag pair - force width 2
+                    } else if (has_emoji_vs or has_emoji_presentation or has_emoji_modifier_base or ri_count == 2) {
+                        // Emoji presentation, modifier base, or flag pair - force width 2
                         width = @max(2, width);
                     }
 
@@ -171,6 +183,31 @@ test "gwidth: emoji with skin tone selector" {
     try testing.expectEqual(2, gwidth("👋🏿", .unicode));
     try testing.expectEqual(4, gwidth("👋🏿", .wcwidth));
     try testing.expectEqual(2, gwidth("👋🏿", .no_zwj));
+}
+
+test "gwidth: bare emoji modifier base is double width only under .unicode_explicit" {
+    // ☝ U+261D and 🖐 U+1F590 are Emoji_Modifier_Base with default-text
+    // presentation and EAW=Neutral. kitty renders them double-width (and thus
+    // in color) even with no VS16, but that width is only safe when the app is
+    // authoritative for width, so it lives in .unicode_explicit.
+    try testing.expectEqual(2, gwidth("\u{261D}", .unicode_explicit));
+    try testing.expectEqual(2, gwidth("\u{1F590}", .unicode_explicit));
+    try testing.expectEqual(1, gwidth("\u{261D}", .unicode));
+    try testing.expectEqual(1, gwidth("\u{1F590}", .unicode));
+
+    // Plain symbols that are Emoji but neither presentation nor modifier base
+    // stay single width in both: © U+00A9, ‼ U+203C, ☜ U+261C.
+    for ([_]Method{ .unicode, .unicode_explicit }) |m| {
+        try testing.expectEqual(1, gwidth("\u{00A9}", m));
+        try testing.expectEqual(1, gwidth("\u{203C}", m));
+        try testing.expectEqual(1, gwidth("\u{261C}", m));
+    }
+
+    // Emoji presentation and VS16-qualified emoji are double-width regardless.
+    for ([_]Method{ .unicode, .unicode_explicit }) |m| {
+        try testing.expectEqual(2, gwidth("\u{1F600}", m)); // 😀 Emoji_Presentation
+        try testing.expectEqual(2, gwidth("\u{261D}\u{FE0F}", m)); // ☝️ VS16
+    }
 }
 
 test "gwidth: zero-width space" {

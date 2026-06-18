@@ -20,6 +20,7 @@ pub fn build(b: *std.Build) void {
             "general_category",
             "is_emoji_presentation",
             "is_emoji_vs_base",
+            "is_emoji_modifier_base",
             "case_folding_simple",
             "simple_uppercase_mapping",
             "simple_lowercase_mapping",

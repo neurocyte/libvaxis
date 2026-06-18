@@ -39,6 +39,15 @@ pub const Capabilities = struct {
     explicit_width: bool = false,
     scaled_text: bool = false,
     multi_cursor: bool = false,
+
+    /// The width method to use given these capabilities. When the application
+    /// is authoritative for width (it declares widths via the explicit-width
+    /// protocol), the wider `Emoji_Modifier_Base` variant is safe; otherwise we
+    /// stay on the terminal-neutral Unicode width.
+    pub fn widthMethod(self: Capabilities) gwidth.Method {
+        if (self.explicit_width and self.unicode == .unicode) return .unicode_explicit;
+        return self.unicode;
+    }
 };
 
 pub const Options = struct {
@@ -200,7 +209,7 @@ pub fn resize(
     log.debug("resizing screen: width={d} height={d}", .{ winsize.cols, winsize.rows });
     self.screen.deinit(alloc);
     self.screen = try Screen.init(alloc, winsize);
-    self.screen.width_method = self.caps.unicode;
+    self.screen.width_method = self.caps.widthMethod();
     // try self.screen.int(alloc, winsize.cols, winsize.rows);
     // we only init our current screen. This has the effect of redrawing
     // every cell
@@ -456,7 +465,7 @@ pub fn render(self: *Vaxis, tty: *std.Io.Writer) !void {
         const w: u16 = blk: {
             if (cell.char.width != 0) break :blk cell.char.width;
 
-            const method: gwidth.Method = self.caps.unicode;
+            const method: gwidth.Method = self.caps.widthMethod();
             const width: u16 = @intCast(gwidth.gwidth(cell.char.grapheme, method));
             break :blk @max(1, width);
         };
@@ -1247,7 +1256,7 @@ pub fn prettyPrint(self: *Vaxis, tty: *std.Io.Writer) !void {
         const w = blk: {
             if (cell.char.width != 0) break :blk cell.char.width;
 
-            const method: gwidth.Method = self.caps.unicode;
+            const method: gwidth.Method = self.caps.widthMethod();
             const width = gwidth.gwidth(cell.char.grapheme, method);
             break :blk @max(1, width);
         };
