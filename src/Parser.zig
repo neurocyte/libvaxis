@@ -307,7 +307,10 @@ inline fn parseOsc(input: []const u8, paste_allocator: ?std.mem.Allocator) !Resu
             };
         },
         52 => {
-            if (input[semicolon_idx + 1] != 'c') return null_event;
+            switch (input[semicolon_idx + 1]) {
+                'c', 'p' => {},
+                else => return null_event,
+            }
             const payload = if (bel_terminated)
                 input[semicolon_idx + 3 .. sequence.len - 1]
             else

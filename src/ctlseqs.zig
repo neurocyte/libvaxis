@@ -136,6 +136,8 @@ pub const osc777_notify = "\x1b]777;notify;{s};{s}\x1b\\";
 pub const osc22_mouse_shape = "\x1b]22;{s}\x1b\\";
 pub const osc52_clipboard_copy = "\x1b]52;c;{s}\x1b\\";
 pub const osc52_clipboard_request = "\x1b]52;c;?\x1b\\";
+pub const osc52_primary_copy = "\x1b]52;p;{s}\x1b\\";
+pub const osc52_primary_request = "\x1b]52;p;?\x1b\\";
 
 // Kitty graphics
 pub const kitty_graphics_clear = "\x1b_Ga=d\x1b\\";

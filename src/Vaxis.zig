@@ -1120,24 +1120,37 @@ pub fn freeImage(_: Vaxis, tty: *std.Io.Writer, id: u32) void {
     tty.flush() catch {};
 }
 
-pub fn copyToSystemClipboard(_: Vaxis, tty: *std.Io.Writer, text: []const u8, encode_allocator: std.mem.Allocator) !void {
+fn writeOsc52Copy(tty: *std.Io.Writer, text: []const u8, encode_allocator: std.mem.Allocator, comptime template: []const u8) !void {
     const encoder = std.base64.standard.Encoder;
     const size = encoder.calcSize(text.len);
     const buf = try encode_allocator.alloc(u8, size);
     const b64 = encoder.encode(buf, text);
     defer encode_allocator.free(buf);
-    try tty.print(
-        ctlseqs.osc52_clipboard_copy,
-        .{b64},
-    );
-
+    try tty.print(template, .{b64});
     try tty.flush();
+}
+
+pub fn copyToSystemClipboard(_: Vaxis, tty: *std.Io.Writer, text: []const u8, encode_allocator: std.mem.Allocator) !void {
+    return writeOsc52Copy(tty, text, encode_allocator, ctlseqs.osc52_clipboard_copy);
+}
+
+pub fn copyToPrimarySelection(_: Vaxis, tty: *std.Io.Writer, text: []const u8, encode_allocator: std.mem.Allocator) !void {
+    return writeOsc52Copy(tty, text, encode_allocator, ctlseqs.osc52_primary_copy);
 }
 
 pub fn requestSystemClipboard(self: Vaxis, tty: *std.Io.Writer) !void {
     if (self.opts.system_clipboard_allocator == null) return error.NoClipboardAllocator;
     try tty.print(
         ctlseqs.osc52_clipboard_request,
+        .{},
+    );
+    try tty.flush();
+}
+
+pub fn requestPrimarySelection(self: Vaxis, tty: *std.Io.Writer) !void {
+    if (self.opts.system_clipboard_allocator == null) return error.NoClipboardAllocator;
+    try tty.print(
+        ctlseqs.osc52_primary_request,
         .{},
     );
     try tty.flush();
