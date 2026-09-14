@@ -83,12 +83,7 @@ pub const Buffer = struct {
         var prev_break: bool = true;
 
         while (iter.nextCodePoint()) |result| {
-            if (prev_break and !result.is_break) {
-                // Start of a new grapheme
-                const cp_len: usize = std.unicode.utf8CodepointSequenceLength(result.code_point) catch 1;
-                grapheme_start = iter.i - cp_len;
-            }
-
+            // The cluster start is carried over from the previous cluster's end.
             if (result.is_break) {
                 // End of a grapheme
                 const grapheme_end = iter.i;

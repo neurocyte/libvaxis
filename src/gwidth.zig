@@ -56,15 +56,8 @@ pub fn gwidth(str: []const u8, method: Method) u16 {
             var grapheme_iter = uucode.grapheme.Iterator(uucode.utf8.Iterator).init(.init(str));
 
             var grapheme_start: usize = 0;
-            var prev_break: bool = true;
 
             while (grapheme_iter.nextCodePoint()) |result| {
-                if (prev_break and !result.is_break) {
-                    // Start of a new grapheme
-                    const cp_len: usize = std.unicode.utf8CodepointSequenceLength(result.code_point) catch 1;
-                    grapheme_start = grapheme_iter.i - cp_len;
-                }
-
                 if (result.is_break) {
                     // End of a grapheme - calculate its width
                     const grapheme_end = grapheme_iter.i;
@@ -129,7 +122,6 @@ pub fn gwidth(str: []const u8, method: Method) u16 {
 
                     grapheme_start = grapheme_end;
                 }
-                prev_break = result.is_break;
             }
 
             return total;
@@ -158,6 +150,21 @@ pub fn gwidth(str: []const u8, method: Method) u16 {
             }
             return result;
         },
+    }
+}
+
+test "gwidth: invalid utf8 does not underflow the cluster start" {
+    for ([_][]const u8{
+        "\xA0\xCC\x81", // lone continuation byte, then a combining mark
+        "\xFF\xFF\xFF",
+        "\xC3\x28", // truncated two-byte sequence
+        "\xF0\x9F", // truncated emoji
+        "a\xE2\x98", // ascii, then a truncated sequence
+    }) |str| {
+        try testing.expect(gwidth(str, .unicode) > 0);
+        _ = gwidth(str, .unicode_explicit);
+        _ = gwidth(str, .wcwidth);
+        _ = gwidth(str, .no_zwj);
     }
 }
 
