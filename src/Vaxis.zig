@@ -267,9 +267,9 @@ pub fn queryTerminal(self: *Vaxis, tty: *std.Io.Writer, timeout: std.Io.Duration
     try self.queryTerminalSend(tty);
     try std.Io.futexWaitTimeout(
         self.io,
-        atomic.Value(u32),
-        &self.query_futex,
-        .init(0),
+        u32,
+        &self.query_futex.raw,
+        0,
         .{
             .duration = .{
                 .clock = .real,
