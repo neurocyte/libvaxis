@@ -2,7 +2,7 @@
     .name = .vaxis,
     .fingerprint = 0x14fbbb94fc556305,
     .version = "0.6.0",
-    .minimum_zig_version = "0.17.0-dev.2122+3e15e99e6",
+    .minimum_zig_version = "0.17.0",
     .dependencies = .{
         .zigimg = .{
             .url = "git+https://github.com/neurocyte/zigimg?ref=master#9d06b1d3a1098e249de49b718b65534a9842adef",
