@@ -316,8 +316,12 @@ inline fn parseOsc(input: []const u8, paste_allocator: ?std.mem.Allocator) !Resu
             else
                 input[semicolon_idx + 3 .. sequence.len - 2];
             const decoder = std.base64.standard.Decoder;
-            const text = try paste_allocator.?.alloc(u8, try decoder.calcSizeForSlice(payload));
-            try decoder.decode(text, payload);
+            const size = decoder.calcSizeForSlice(payload) catch return null_event;
+            const text = try paste_allocator.?.alloc(u8, size);
+            decoder.decode(text, payload) catch {
+                paste_allocator.?.free(text);
+                return null_event;
+            };
             log.debug("decoded paste: {s}", .{text});
             return .{
                 .event = .{ .paste = text },
@@ -930,6 +934,22 @@ test "parse: osc52 paste" {
         },
         else => try testing.expect(false),
     }
+}
+
+test "parse: osc52 paste with invalid base64" {
+    const alloc = testing.allocator_instance.allocator();
+    var parser: Parser = .{};
+
+    // truncated payload terminated by the ESC of an unrelated sequence
+    const truncated = "\x1b]52;c;b3NjNTIgcGFzd\x1b[";
+    var result = try parser.parse(truncated, alloc);
+    try testing.expectEqual(truncated.len, result.n);
+    try testing.expectEqual(null, result.event);
+
+    const invalid_char = "\x1b]52;c;b3Nj*TIg\x1b\\";
+    result = try parser.parse(invalid_char, alloc);
+    try testing.expectEqual(invalid_char.len, result.n);
+    try testing.expectEqual(null, result.event);
 }
 
 test "parse: focus_in" {
